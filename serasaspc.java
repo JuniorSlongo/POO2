@@ -1,48 +1,91 @@
-import java.util.Scanner;
+abstract class Handler {
+    protected Handler successor;
 
-public class VerificacaoEmprestimo {
+    public void setSuccessor(Handler successor) {
+        this.successor = successor;
+    }
 
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+    public abstract void handleRequest(Cliente cliente);
+}
 
-        // Etapa 1: Verificação de disponibilidade de crédito
-        System.out.print("Informe o valor do crédito desejado: ");
-        double valorCredito = scanner.nextDouble();
-
-        // Suponha que a instituição financeira tenha um limite mínimo de crédito
-        double limiteMinimoCredito = 1000.0;
-        if (valorCredito < limiteMinimoCredito) {
-            System.out.println("Desculpe, o valor do crédito é inferior ao limite mínimo.");
-            return;
-        }
-
-        // Etapa 2: Verificação de compatibilidade da renda
-        System.out.print("Informe sua renda mensal: ");
-        double rendaMensal = scanner.nextDouble();
-
-        double parcelaMaxima = rendaMensal * 0.25;
-        if (valorCredito > parcelaMaxima) {
-            System.out.println("Desculpe, o valor da parcela excede 25% da sua renda mensal.");
-            return;
-        }
-
-        // Etapa 3: Verificação de histórico de crédito
-        System.out.print("Você possui alguma restrição no SPC/SERASA? (S/N): ");
-        String restricao = scanner.next();
-
-        if (restricao.equalsIgnoreCase("S")) {
-            System.out.println("Desculpe, não podemos conceder o empréstimo devido à restrição no histórico de crédito.");
-            return;
-        }
-
-        // Etapa 4: Verificação de garantias
-        System.out.print("Você possui algum bem que possa ser dado como garantia? (S/N): ");
-        String garantia = scanner.next();
-
-        if (garantia.equalsIgnoreCase("S")) {
-            System.out.println("Empréstimo aprovado! Você pode utilizar o bem como garantia.");
+class VerificaCreditoHandler extends Handler {
+    @Override
+    public void handleRequest(Cliente cliente) {
+        if (cliente.getValorCreditoDesejado() >= 1000) { // Supondo que 1000 é o mínimo
+            if (successor != null) {
+                successor.handleRequest(cliente);
+            }
         } else {
-            System.out.println("Empréstimo aprovado! Aguarde a liberação do crédito.");
+            System.out.println("Crédito abaixo do valor mínimo permitido.");
         }
+    }
+}
+
+class VerificaRendaHandler extends Handler {
+    @Override
+    public void handleRequest(Cliente cliente) {
+        double parcelaMaxima = cliente.getRendaMensal() * 0.25;
+        if (cliente.getValorCreditoDesejado() <= parcelaMaxima) {
+            if (successor != null) {
+                successor.handleRequest(cliente);
+            }
+        } else {
+            System.out.println("A parcela excede 25% da renda mensal.");
+        }
+    }
+}
+
+class VerificaHistoricoCreditoHandler extends Handler {
+    @Override
+    public void handleRequest(Cliente cliente) {
+        if (!cliente.temRestricoesSPC_SERASA()) {
+            if (successor != null) {
+                successor.handleRequest(cliente);
+            }
+        } else {
+            System.out.println("Cliente com restrições no SPC/SERASA.");
+        }
+    }
+}
+
+class VerificaGarantiasHandler extends Handler {
+    @Override
+    public void handleRequest(Cliente cliente) {
+        if (cliente.temGarantias()) {
+            System.out.println("Crédito aprovado com garantias.");
+        } else {
+            System.out.println("Crédito aprovado sem garantias.");
+        }
+    }
+}
+
+class Cliente {
+    private double valorCreditoDesejado;
+    private double rendaMensal;
+    private boolean restricaoSPC_SERASA;
+    private boolean possuiGarantias;
+
+    // Getters e setters aqui
+    // ...
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // Configuração da cadeia de responsabilidade
+        Handler verificaCredito = new VerificaCreditoHandler();
+        Handler verificaRenda = new VerificaRendaHandler();
+        Handler verificaHistorico = new VerificaHistoricoCreditoHandler();
+        Handler verificaGarantias = new VerificaGarantiasHandler();
+
+        verificaCredito.setSuccessor(verificaRenda);
+        verificaRenda.setSuccessor(verificaHistorico);
+        verificaHistorico.setSuccessor(verificaGarantias);
+
+        // Criação de um cliente de exemplo
+        Cliente cliente = new Cliente();
+        // Defina os valores para o cliente aqui
+
+        // Início do processo de verificação
+        verificaCredito.handleRequest(cliente);
     }
 }
